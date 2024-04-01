@@ -6,8 +6,8 @@ using Eigen::Matrix3d;
 using Eigen::Vector2d;
 using Eigen::Vector3d;
 
-float radians(float degrees);
-float degrees(float radians);
+double radians(double degrees);
+double degrees(double radians);
 Matrix3d utoi(Vector3d v);
 Vector3d itou(const Matrix3d &m);
 Matrix2d _rot_submatrix(const Matrix3d &m);

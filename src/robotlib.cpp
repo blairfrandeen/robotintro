@@ -2,11 +2,15 @@
 
 #include <cmath>
 
-float radians(float degrees) { return M_PI * degrees / 180.0; }
-float degrees(float radians) { return 180 / M_PI * radians; }
+double radians(double degrees) { return M_PI * degrees / 180.0; }
+double degrees(double radians) { return 180 / M_PI * radians; }
 
 Matrix3d utoi(Vector3d v) {
-    Matrix3d m;  // position vector m.topRightCorner(2, 1) << v(0), v(1);
+    Matrix3d m;
+
+    // position vector
+    m.topRightCorner(2, 1) << v(0), v(1);
+
     // rotation matrix
     auto theta_rad = radians(v(2));
     m.topLeftCorner(2, 2) << cos(theta_rad), -sin(theta_rad), sin(theta_rad),
@@ -20,7 +24,7 @@ Matrix3d utoi(Vector3d v) {
 
 Vector3d itou(const Matrix3d &m) {
     Vector3d v = m.rightCols(1);
-    v(2) = degrees(acos(m(0, 0)));  // better way?
+    v(2) = degrees(std::atan2(m(1, 0), m(0, 0)));
 
     return v;
 }
