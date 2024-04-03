@@ -1,8 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Eigen/Geometry"
-#include "Eigen/src/Core/Matrix.h"
-#include "Eigen/src/Geometry/Rotation2D.h"
 #include "robotlib.cpp"
 #include "robotlib.h"
 
@@ -42,6 +40,19 @@ TEST_CASE("inverse transform works", "[matrix]") {
 
         REQUIRE(itransform(r).isApprox(r.inverse(), 1e-6));
     }
+}
+
+TEST_CASE("matrix multiplication", "[matrix]") {
+    /* Eigen::Rotation2D<double> rot1(rand()); */
+    Eigen::Matrix3d T1 = Eigen::Matrix3d::Identity();
+    T1.topLeftCorner(2, 2) =
+        Eigen::Rotation2D<double>(rand()).toRotationMatrix();
+    T1.rightCols(1) << rand(), rand(), 1;
+    Eigen::Matrix3d T2 = Eigen::Matrix3d::Identity();
+    T2.topLeftCorner(2, 2) =
+        Eigen::Rotation2D<double>(rand()).toRotationMatrix();
+    T1.rightCols(1) << rand(), rand(), 1;
+    REQUIRE(tmult(T1, T2) == T1 * T2);
 }
 
 TEST_CASE("Example 2.1", "[example]") {
