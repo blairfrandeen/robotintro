@@ -94,6 +94,15 @@ Matrix3d kin(Vector3d joint_angles_deg, Vector3d link_lengths_m) {
     return base_to_wrist;
 }
 
+Matrix3d where(Vector3d joint_angles_deg, Vector3d link_lengths_m,
+               Matrix3d tool_to_wrist, Matrix3d base_to_station) {
+    Matrix3d base_to_wrist = kin(joint_angles_deg, link_lengths_m);
+    Matrix3d wrist_to_base = itransform(base_to_wrist);
+    Matrix3d tool_to_station = tool_to_wrist * wrist_to_base * base_to_station;
+
+    return tool_to_station;
+}
+
 class Link {
    public:
     const double length, twist;
