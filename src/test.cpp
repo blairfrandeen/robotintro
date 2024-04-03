@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Eigen/Geometry"
+#include "Eigen/src/Core/Matrix.h"
 #include "robotlib.cpp"
 #include "robotlib.h"
 
@@ -78,4 +79,14 @@ TEST_CASE("Programming Exercise 2.5", "[exercise]") {
         tmult(b_rel_a, itou(itransform(tmult(u_rel_c, a_rel_u))));
     Eigen::Vector3d expected(-10.884, 9.36156, 45);
     REQUIRE(itou(result).isApprox(expected, 1e-3));
+}
+
+TEST_CASE("forward kinematics", "[kinematics]") {
+    Eigen::Vector3d link_len_m(0.5, 0.5, 0);
+    // solved on paper
+    REQUIRE(itou(kin(Eigen::Vector3d(45, -30, -30), link_len_m))
+                .isApprox(Eigen::Vector3d(0.836, 0.482, -15), 1e-3));
+    // solved on paper
+    REQUIRE(itou(kin(Eigen::Vector3d(30, 30, 0), link_len_m))
+                .isApprox(Eigen::Vector3d(0.683, 0.683, 60), 1e-3));
 }
