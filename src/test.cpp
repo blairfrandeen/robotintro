@@ -2,6 +2,7 @@
 
 #include "Eigen/Geometry"
 #include "Eigen/src/Core/Matrix.h"
+#include "Eigen/src/Geometry/Rotation2D.h"
 #include "robotlib.cpp"
 #include "robotlib.h"
 
@@ -41,4 +42,29 @@ TEST_CASE("inverse transform works", "[matrix]") {
 
         REQUIRE(itransform(r).isApprox(r.inverse(), 1e-6));
     }
+}
+
+TEST_CASE("Example 2.1", "[example]") {
+    Eigen::Rotation2D<double> rot_b_rel_a(radians(30));
+    Eigen::Matrix3d transform;
+    transform.topLeftCorner(2, 2) = rot_b_rel_a.toRotationMatrix();
+    transform.bottomRows(1) << 0, 0, 1;
+    transform.rightCols(1) << 0, 0, 1;
+
+    Eigen::Vector3d p_rel_b(0, 2, 0);
+    Eigen::Vector3d a_rel_p_expected(-1, 1.732, 0);
+    Eigen::Vector3d result = transform * p_rel_b;
+
+    REQUIRE(result.isApprox(a_rel_p_expected, 1e-3));
+}
+
+TEST_CASE("Programming Exercise 2.5", "[exercise]") {
+    Eigen::Vector3d a_rel_u(11, -1, 30);
+    Eigen::Vector3d b_rel_a(0, 7, 45);
+    Eigen::Vector3d u_rel_c(-3, -3, -30);
+
+    Eigen::Matrix3d result =
+        tmult(b_rel_a, itou(itransform(tmult(u_rel_c, a_rel_u))));
+    Eigen::Vector3d expected(-10.884, 9.36156, 45);
+    REQUIRE(itou(result).isApprox(expected, 1e-3));
 }

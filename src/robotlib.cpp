@@ -35,7 +35,7 @@ Vector2d _pos_submatrix(const Matrix3d &m) { return m.topRightCorner(2, 1); }
 
 Matrix3d tmult(const Matrix3d &b_rel_a, const Matrix3d &c_rel_b) {
     Matrix3d m;
-    m.topLeftCorner(2, 2) = _rot_submatrix(c_rel_b) * _rot_submatrix(b_rel_a);
+    m.topLeftCorner(2, 2) = _rot_submatrix(b_rel_a) * _rot_submatrix(c_rel_b);
     Vector2d b_org_rel_a = b_rel_a.topRightCorner(2, 1);
     Vector2d c_org_rel_b = c_rel_b.topRightCorner(2, 1);
     m.topRightCorner(2, 1) =
