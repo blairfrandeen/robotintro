@@ -90,3 +90,16 @@ TEST_CASE("forward kinematics", "[kinematics]") {
     REQUIRE(itou(kin(Eigen::Vector3d(30, 30, 0), link_len_m))
                 .isApprox(Eigen::Vector3d(0.683, 0.683, 60), 1e-3));
 }
+
+TEST_CASE("where kinematics", "[kinematics]") {
+    Eigen::Vector3d link_len_m(0.5, 0.5, 0);
+    Eigen::Vector3d wrist_to_tool(0.1, 0.2, 30);
+    Eigen::Vector3d base_to_station(-0.1, 0.3, 0);
+    // solved in onshape
+    REQUIRE(itou(where(Eigen::Vector3d(45, -30, -30), link_len_m,
+                       utoi(wrist_to_tool), utoi(base_to_station)))
+                .isApprox(Eigen::Vector3d(1.085, 0.350, 15), 1e-3));
+    REQUIRE(itou(where(Eigen::Vector3d(30, 30, 0), link_len_m,
+                       utoi(wrist_to_tool), utoi(base_to_station)))
+                .isApprox(Eigen::Vector3d(0.660, 0.570, 90), 1e-3));
+}

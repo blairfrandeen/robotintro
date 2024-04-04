@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include "Eigen/src/Core/Matrix.h"
+
 double radians(double degrees) { return M_PI * degrees / 180.0; }
 double degrees(double radians) { return 180 / M_PI * radians; }
 
@@ -95,12 +97,11 @@ Matrix3d kin(Vector3d joint_angles_deg, Vector3d link_lengths_m) {
 }
 
 Matrix3d where(Vector3d joint_angles_deg, Vector3d link_lengths_m,
-               Matrix3d tool_to_wrist, Matrix3d base_to_station) {
+               Matrix3d wrist_to_tool, Matrix3d base_to_station) {
     Matrix3d base_to_wrist = kin(joint_angles_deg, link_lengths_m);
-    Matrix3d wrist_to_base = itransform(base_to_wrist);
-    Matrix3d tool_to_station = tool_to_wrist * wrist_to_base * base_to_station;
-
-    return tool_to_station;
+    Matrix3d station_to_base = itransform(base_to_station);
+    Matrix3d station_to_tool = station_to_base * base_to_wrist * wrist_to_tool;
+    return station_to_tool;
 }
 
 class Link {
