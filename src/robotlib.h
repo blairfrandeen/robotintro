@@ -20,3 +20,8 @@ Matrix3d kin(Vector3d joint_angles_deg, Vector3d link_lengths_m);
 std::tuple<Vector3d, Vector3d, bool> invkin(Matrix3d goal_frame,
                                             Vector3d joint_angles_current,
                                             Vector3d link_lengths_m);
+std::tuple<Vector3d, Vector3d, bool> solve(Matrix3d station_to_tool_goal,
+                                           Vector3d link_lengths_m,
+                                           Vector3d joint_angles_current,
+                                           Matrix3d wrist_to_tool,
+                                           Matrix3d base_to_station);
