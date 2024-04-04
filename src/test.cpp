@@ -1,7 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Eigen/Geometry"
-#include "Eigen/src/Core/Matrix.h"
 #include "robotlib.cpp"
 #include "robotlib.h"
 
@@ -102,4 +101,23 @@ TEST_CASE("where kinematics", "[kinematics]") {
     REQUIRE(itou(where(Eigen::Vector3d(30, 30, 0), link_len_m,
                        utoi(wrist_to_tool), utoi(base_to_station)))
                 .isApprox(Eigen::Vector3d(0.660, 0.570, 90), 1e-3));
+}
+
+TEST_CASE("kinematics are inverse", "[kinematics]") {
+    Eigen::Vector3d link_len_m(0.5, 0.5, 0);
+    Eigen::Vector3d joint_angles_current(35, 30, 60);
+    Eigen::Matrix3d goal_frame = utoi(Vector3d(0.383, -0.7, 35));
+    auto [sol_near, sol_far, found_sol] =
+        invkin(goal_frame, joint_angles_current, link_len_m);
+
+    // a solution should exist
+    REQUIRE(found_sol);
+
+    // two solutions should exist, and setting the joint angles to either
+    // solution should yield the same result
+    REQUIRE(itou(kin(sol_near, link_len_m))
+                .isApprox(itou(kin(sol_far, link_len_m)), 1e-3));
+
+    // kinematics should be inverse
+    REQUIRE(kin(sol_near, link_len_m).isApprox(goal_frame, 1e-6));
 }

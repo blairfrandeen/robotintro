@@ -1,8 +1,7 @@
 #include "robotlib.h"
 
 #include <cmath>
-
-#include "Eigen/src/Core/Matrix.h"
+#include <tuple>
 
 double radians(double degrees) { return M_PI * degrees / 180.0; }
 double degrees(double radians) { return 180 / M_PI * radians; }
@@ -102,6 +101,60 @@ Matrix3d where(Vector3d joint_angles_deg, Vector3d link_lengths_m,
     Matrix3d station_to_base = itransform(base_to_station);
     Matrix3d station_to_tool = station_to_base * base_to_wrist * wrist_to_tool;
     return station_to_tool;
+}
+
+Vector3d _get_solution(double sin_theta_2, double cos_theta_2,
+                       Vector3d link_lengths_m, Vector3d goal_frame_vec) {
+    double x = goal_frame_vec[0];
+    double y = goal_frame_vec[1];
+    double phi = radians(goal_frame_vec[2]);
+    double l1 = link_lengths_m[0];
+    double l2 = link_lengths_m[1];
+    // book equation 4.19
+    double k1 = l1 + l2 * cos_theta_2;
+    double k2 = l2 * sin_theta_2;
+
+    // book equation 4.27
+    double theta_1 = atan2(y, x) - atan2(k2, k1);
+    double theta_2 = asin(sin_theta_2);
+    double theta_3 = phi - theta_1 - theta_2;
+
+    return Vector3d(degrees(theta_1), degrees(theta_2), degrees(theta_3));
+}
+
+std::tuple<Vector3d, Vector3d, bool> invkin(Matrix3d goal_frame,
+                                            Vector3d joint_angles_current,
+                                            Vector3d link_lengths_m) {
+    // initialize variables
+    Vector3d sol_near, sol_far;
+    Vector3d goal_frame_vec = itou(goal_frame);
+    double x = goal_frame_vec[0];
+    double y = goal_frame_vec[1];
+    double l1 = link_lengths_m[0];
+    double l2 = link_lengths_m[1];
+
+    // book equation 4.14
+    double cos_theta_2 = (x * x + y * y - l1 * l1 - l2 * l2) / (2 * l1 * l2);
+    if ((cos_theta_2 < -1) || (cos_theta_2 > 1)) {
+        // no solution found
+        return std::make_tuple(sol_near, sol_far, false);
+    }
+
+    // book equation 4.15
+    double sin_theta_2 = sqrt(1 - cos_theta_2 * cos_theta_2);
+    Vector3d sol1 =
+        _get_solution(sin_theta_2, cos_theta_2, link_lengths_m, goal_frame_vec);
+    Vector3d sol2 = _get_solution(-sin_theta_2, cos_theta_2, link_lengths_m,
+                                  goal_frame_vec);
+
+    double sol1_dist = abs((sol1 - joint_angles_current).topRows(2).sum());
+    double sol2_dist = abs((sol2 - joint_angles_current).topRows(2).sum());
+
+    if (sol2_dist > sol1_dist) {
+        return std::make_tuple(sol1, sol2, true);
+    } else {
+        return std::make_tuple(sol2, sol1, true);
+    }
 }
 
 class Link {
