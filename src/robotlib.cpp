@@ -129,7 +129,9 @@ Vector3d _get_solution(double sin_theta_2, double cos_theta_2,
 
     // book equation 4.27
     double theta_1 = atan2(y, x) - atan2(k2, k1);
-    double theta_2 = asin(sin_theta_2);
+
+    // book equation 4.15
+    double theta_2 = atan2(sin_theta_2, cos_theta_2);
     double theta_3 = phi - theta_1 - theta_2;
 
     return Vector3d(degrees(theta_1), degrees(theta_2), degrees(theta_3));
