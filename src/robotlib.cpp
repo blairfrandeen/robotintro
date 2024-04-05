@@ -162,8 +162,10 @@ std::tuple<Vector3d, Vector3d, bool> invkin(Matrix3d goal_frame,
     Vector3d sol2 = _get_solution(-sin_theta_2, cos_theta_2, link_lengths_m,
                                   goal_frame_vec);
 
-    double sol1_dist = abs((sol1 - joint_angles_current).topRows(2).sum());
-    double sol2_dist = abs((sol2 - joint_angles_current).topRows(2).sum());
+    double sol1_dist =
+        (sol1 - joint_angles_current).topRows(2).cwiseAbs().sum();
+    double sol2_dist =
+        (sol2 - joint_angles_current).topRows(2).cwiseAbs().sum();
 
     if (sol2_dist > sol1_dist) {
         return std::make_tuple(sol1, sol2, true);
