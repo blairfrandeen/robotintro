@@ -4,11 +4,8 @@
 #include <cmath>
 #include <iostream>
 #include <iterator>
+#include <vector>
 
-#include "Eigen/src/Core/Matrix.h"
-#include "SFML/Graphics/Color.hpp"
-#include "SFML/System/Vector2.hpp"
-#include "SFML/Window/Window.hpp"
 #include "robotlib.h"
 
 using Eigen::Matrix2d;
@@ -172,18 +169,50 @@ class RotaryLink {
     }
 };
 
+class Planar3DOFManipulator {
+   public:
+    Vector3d& base_frame;
+    Planar3DOFManipulator(Vector3d link_lengths_m, Vector3d& base_frame)
+        : base_frame(base_frame),
+          L1(base_frame, link_lengths_m[0]),
+          L2(L1.end_frame, link_lengths_m[1]),
+          L3(L2.end_frame, link_lengths_m[2]),
+          wrist_to_tool(Matrix3d()) {}
+
+    void move_joints(Vector3d joint_angles_deg) {
+        L1.rotate(joint_angles_deg[0]);
+        L2.rotate(joint_angles_deg[1]);
+        L3.rotate(joint_angles_deg[2]);
+    }
+    Vector3d end_effector_position() const { return L3.end_frame; }
+    Vector3d tool_position() const {
+        // L3.end_frame is base_to_wrist
+        // want base_to_tool
+
+        return itou(tmult(utoi(L3.end_frame), wrist_to_tool));
+    }
+
+    void set_tool(Vector3d wrist_to_tool_u) {
+        wrist_to_tool = utoi(wrist_to_tool_u);
+    }
+
+   private:
+    RotaryLink L1;
+    RotaryLink L2;
+    RotaryLink L3;
+    Matrix3d wrist_to_tool;
+};
+
 int main() {
     Vector3d origin_frame;
-    RotaryLink L1(origin_frame, 0.5);
-    /* Vector3d& ef = L1.end_frame; */
-    RotaryLink L2(L1.end_frame, 0.5);
-    RotaryLink L3(L2.end_frame, 0);
-    L1.rotate(45);
-    L2.rotate(-30);
-    L3.rotate(35);
-    cout << L1.end_frame << endl;  // 0.433, 0.25, 0; last element should be 30
-    cout << L2.end_frame << endl;  // 1, 0, 0; should be 0.933, 0.25, 30
-    cout << L3.end_frame << endl;  // 1, 0, 0; should be 0.933, 0.25, 30
+
+    Vector3d link_lengths_m(0.5, 0.5, 0);
+    Planar3DOFManipulator m(link_lengths_m, origin_frame);
+    Vector3d joint_angles_deg(45, -30, 0);
+    m.move_joints(joint_angles_deg);
+    cout << m.end_effector_position() << endl;
+    m.set_tool(Vector3d(0.1, 0.2, 30));
+    cout << m.tool_position() << endl;
     return 0;
 }
 
