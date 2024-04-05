@@ -176,22 +176,3 @@ std::tuple<Vector3d, Vector3d, bool> invkin(Matrix3d goal_frame,
         return std::make_tuple(sol2, sol1, true);
     }
 }
-
-class Link {
-   public:
-    const double length, twist;
-    double offset, angle;
-};
-
-class PrismaticLink : public Link {
-   public:
-    const double length, twist, angle;
-    double offset;
-    PrismaticLink(double l, double t, double a, double o);
-};
-class RotaryLink : public Link {
-   public:
-    const double length, twist, offset;
-    double angle;
-    RotaryLink(double l, double t, double a, double o);
-};

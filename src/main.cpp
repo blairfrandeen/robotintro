@@ -3,7 +3,9 @@
 #include <SFML/Graphics.hpp>
 #include <cmath>
 #include <iostream>
+#include <iterator>
 
+#include "Eigen/src/Core/Matrix.h"
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/System/Vector2.hpp"
 #include "SFML/Window/Window.hpp"
@@ -144,23 +146,50 @@ sf::RectangleShape link(sf::Vector2f origin, double len_m, double angle_deg,
     return linkRect;
 }
 
-int main() {
-    Vector3d joint_angles_current(0, 0, 0);
-    Vector3d link_lengths_m(0.5, 0.5, 0);
-    Matrix3d goal_frame = utoi(Vector3d(0, 0, -90));
-    Matrix3d wrelb = kin(joint_angles_current, link_lengths_m);
-    Vector3d wrist_to_tool(0.1, 0.2, 30);
-    Vector3d base_to_station(-0.1, 0.3, 0);
-    cout << "Forward Kinematics:" << endl << itou(wrelb) << endl;
-    auto [sol_near, sol_far, found_sol] =
-        solve(goal_frame, link_lengths_m, joint_angles_current,
-              utoi(wrist_to_tool), utoi(base_to_station));
-    if (found_sol) {
-        cout << "Near solution: " << endl << sol_near << endl;
-        cout << "Far solution: " << endl << sol_far << endl;
-    } else {
-        cout << "No solution!" << endl;
+class RotaryLink {
+   public:
+    const double length_m;
+    double theta_rad;
+    Vector3d& origin_frame;
+    Vector3d end_frame;
+    RotaryLink(Vector3d& origin_frame, double len_m)
+        : length_m(len_m),
+          origin_frame(origin_frame),
+          end_frame(_get_end_frame(origin_frame)) {
+        theta_rad = 0.f;
     }
+
+    void rotate(double angle_deg) {
+        theta_rad += radians(angle_deg);
+        end_frame = _get_end_frame(origin_frame);
+    }
+
+   private:
+    Vector3d _get_end_frame(Vector3d& origin_frame) {
+        double dx = length_m * cos(theta_rad + radians(origin_frame[2]));
+        double dy = length_m * sin(theta_rad + radians(origin_frame[2]));
+        return origin_frame + Vector3d(dx, dy, degrees(theta_rad));
+    }
+};
+
+int main() {
+    Vector3d origin_frame;
+    RotaryLink L1(origin_frame, 0.5);
+    /* Vector3d& ef = L1.end_frame; */
+    RotaryLink L2(L1.end_frame, 0.5);
+    RotaryLink L3(L2.end_frame, 0);
+    cout << L1.end_frame << endl;  // 0.5, 0, 0
+    cout << L2.end_frame << endl;  // 1, 0, 0
+    L1.rotate(45);
+    L2.rotate(-30);
+    L3.rotate(35);
+    cout << L1.end_frame << endl;  // 0.433, 0.25, 0; last element should be 30
+    cout << L2.end_frame << endl;  // 1, 0, 0; should be 0.933, 0.25, 30
+    cout << L3.end_frame << endl;  // 1, 0, 0; should be 0.933, 0.25, 30
+    return 0;
+}
+
+int graphics() {
     auto window = sf::RenderWindow{{800, 600u}, "Robot Intro!"};
     window.setFramerateLimit(144);
 
