@@ -165,10 +165,10 @@ class RotaryLink {
     }
 
    private:
-    Vector3d _get_end_frame(Vector3d& origin_frame) {
-        double dx = length_m * cos(theta_rad + radians(origin_frame[2]));
-        double dy = length_m * sin(theta_rad + radians(origin_frame[2]));
-        return origin_frame + Vector3d(dx, dy, degrees(theta_rad));
+    Vector3d _get_end_frame(Vector3d& base_to_origin) {
+        Vector3d origin_to_end(length_m * cos(theta_rad),
+                               length_m * sin(theta_rad), degrees(theta_rad));
+        return itou(tmult(base_to_origin, origin_to_end));
     }
 };
 
@@ -178,8 +178,6 @@ int main() {
     /* Vector3d& ef = L1.end_frame; */
     RotaryLink L2(L1.end_frame, 0.5);
     RotaryLink L3(L2.end_frame, 0);
-    cout << L1.end_frame << endl;  // 0.5, 0, 0
-    cout << L2.end_frame << endl;  // 1, 0, 0
     L1.rotate(45);
     L2.rotate(-30);
     L3.rotate(35);
