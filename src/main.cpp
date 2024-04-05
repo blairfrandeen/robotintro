@@ -4,11 +4,9 @@
 #include <cmath>
 #include <iostream>
 
-#include "SFML/Graphics/CircleShape.hpp"
-#include "SFML/Graphics/RectangleShape.hpp"
-#include "SFML/Graphics/RenderWindow.hpp"
-#include "SFML/Graphics/Vertex.hpp"
+#include "SFML/Graphics/Color.hpp"
 #include "SFML/System/Vector2.hpp"
+#include "SFML/Window/Window.hpp"
 #include "robotlib.h"
 
 using Eigen::Matrix2d;
@@ -19,9 +17,9 @@ using Eigen::Vector3d;
 using namespace std;
 
 // multiply meters by this number to get into graphics.
-const double SFML_SCALE = 400.f;
+const double SFML_SCALE = 300.f;
 
-sf::VertexArray xyAxis(sf::RenderWindow& window) {
+sf::VertexArray world_axis(sf::RenderWindow& window, sf::Color axes_color) {
     // Create the X and Y axes
     sf::VertexArray xyAxis(sf::Lines, 4);
 
@@ -40,10 +38,9 @@ sf::VertexArray xyAxis(sf::RenderWindow& window) {
     xyAxis[3].position = sf::Vector2f(xOffset, yAxisLength);
 
     // Set the color of the axes
-    xyAxis[0].color = sf::Color::Blue;
-    xyAxis[1].color = sf::Color::Blue;
-    xyAxis[2].color = sf::Color::Blue;
-    xyAxis[3].color = sf::Color::Blue;
+    for (int i = 0; i < 4; i++) {
+        xyAxis[i].color = axes_color;
+    }
 
     return xyAxis;
 }
@@ -56,11 +53,80 @@ sf::Vector2f _transform_point(sf::Vector2f point_m, sf::RenderWindow& window) {
     return sf::Vector2f(x_offset, y_offset);
 }
 
+sf::VertexArray gfx_frame(Vector3d frame, sf::RenderWindow& window,
+                          sf::Color axes_color) {
+    const float AXIS_LENGTH = 100.0f;  // Length of the axes in pixels
+    const float ARROW_SIZE = 10.0f;    // Size of the arrowhead in pixels
+
+    sf::VertexArray frame_vtx(sf::Lines);
+
+    sf::Vector2f origin_m(frame[0], frame[1]);
+    // Transform the origin from world coordinates to SFML window coordinates
+    sf::Vector2f origin_px = _transform_point(origin_m, window);
+
+    // Calculate the rotation angle in radians
+    float angle_rad = -radians(frame[2]);
+
+    // Calculate the X-axis endpoints
+    sf::Vector2f x_start(origin_px.x, origin_px.y);
+    sf::Vector2f x_end(origin_px.x + AXIS_LENGTH * cos(angle_rad),
+                       origin_px.y + AXIS_LENGTH * sin(angle_rad));
+
+    // Calculate the Y-axis endpoints
+    sf::Vector2f y_start(origin_px.x, origin_px.y);
+    sf::Vector2f y_end(origin_px.x + AXIS_LENGTH * sin(angle_rad),
+                       origin_px.y - AXIS_LENGTH * cos(angle_rad));
+
+    // Draw the X-axis
+    frame_vtx.append(sf::Vertex(x_start, axes_color));
+    frame_vtx.append(sf::Vertex(x_end, axes_color));
+
+    // Draw the arrowhead for the X-axis
+    sf::Vector2f x_arrow_start1(
+        x_end.x - ARROW_SIZE * cos(angle_rad) - ARROW_SIZE * sin(angle_rad),
+        x_end.y - ARROW_SIZE * sin(angle_rad) + ARROW_SIZE * cos(angle_rad));
+    sf::Vector2f x_arrow_end1(x_end.x, x_end.y);
+    frame_vtx.append(sf::Vertex(x_arrow_start1, axes_color));
+    frame_vtx.append(sf::Vertex(x_arrow_end1, axes_color));
+
+    sf::Vector2f x_arrow_start2(
+        x_end.x - ARROW_SIZE * cos(angle_rad) + ARROW_SIZE * sin(angle_rad),
+        x_end.y - ARROW_SIZE * sin(angle_rad) - ARROW_SIZE * cos(angle_rad));
+    sf::Vector2f x_arrow_end2(x_end.x, x_end.y);
+    frame_vtx.append(sf::Vertex(x_arrow_start2, axes_color));
+    frame_vtx.append(sf::Vertex(x_arrow_end2, axes_color));
+
+    // Draw the Y-axis
+    frame_vtx.append(sf::Vertex(y_start, axes_color));
+    frame_vtx.append(sf::Vertex(y_end, axes_color));
+
+    // Draw the arrowhead for the Y-axis
+    sf::Vector2f y_arrow_start1(
+        y_end.x + ARROW_SIZE * cos(angle_rad + M_PI / 2) -
+            ARROW_SIZE * sin(angle_rad + M_PI / 2),
+        y_end.y + ARROW_SIZE * sin(angle_rad + M_PI / 2) +
+            ARROW_SIZE * cos(angle_rad + M_PI / 2));
+    sf::Vector2f y_arrow_end1(y_end.x, y_end.y);
+    frame_vtx.append(sf::Vertex(y_arrow_start1, axes_color));
+    frame_vtx.append(sf::Vertex(y_arrow_end1, axes_color));
+
+    sf::Vector2f y_arrow_start2(
+        y_end.x + ARROW_SIZE * cos(angle_rad + M_PI / 2) +
+            ARROW_SIZE * sin(angle_rad + M_PI / 2),
+        y_end.y + ARROW_SIZE * sin(angle_rad + M_PI / 2) -
+            ARROW_SIZE * cos(angle_rad + M_PI / 2));
+    sf::Vector2f y_arrow_end2(y_end.x, y_end.y);
+    frame_vtx.append(sf::Vertex(y_arrow_start2, axes_color));
+    frame_vtx.append(sf::Vertex(y_arrow_end2, axes_color));
+
+    return frame_vtx;
+}
 /* Given a link origin and length, draw a rectangle representing the link
    starting at the origin vertex, with a given length and angle measured from
    the X axis.
 */
-sf::RectangleShape link(sf::Vector2f origin, double len_m, double angle_deg) {
+sf::RectangleShape link(sf::Vector2f origin, double len_m, double angle_deg,
+                        sf::RenderWindow& window) {
     // Create a rectangle shape
     sf::RectangleShape linkRect(
         sf::Vector2f(len_m * SFML_SCALE, 10.0f));  // Width = len, Height = 10
@@ -69,7 +135,7 @@ sf::RectangleShape link(sf::Vector2f origin, double len_m, double angle_deg) {
     linkRect.setOrigin(0.0f, linkRect.getSize().y / 2.0f);
 
     // Set the position of the rectangle
-    linkRect.setPosition(origin);
+    linkRect.setPosition(_transform_point(origin, window));
 
     // Rotate the rectangle around its origin
     linkRect.setRotation(-angle_deg);
@@ -81,7 +147,6 @@ sf::RectangleShape link(sf::Vector2f origin, double len_m, double angle_deg) {
 int main() {
     Vector3d joint_angles_current(0, 0, 0);
     Vector3d link_lengths_m(0.5, 0.5, 0);
-    /* Matrix3d goal_frame = utoi(Vector3d(0.6, -0.3, 45)); */
     Matrix3d goal_frame = utoi(Vector3d(0, 0, -90));
     Matrix3d wrelb = kin(joint_angles_current, link_lengths_m);
     Vector3d wrist_to_tool(0.1, 0.2, 30);
@@ -109,14 +174,19 @@ int main() {
         window.clear();
 
         // draw things here:
-        sf::VertexArray axs = xyAxis(window);
-        sf::RectangleShape lnk_1 =
-            link(_transform_point(sf::Vector2f(0, 0), window), 0.5, 30);
+        sf::VertexArray axs = world_axis(window, sf::Color::Cyan);
+        sf::RectangleShape lnk_1 = link(sf::Vector2f(0, 0), 0.5, 30, window);
+        sf::VertexArray frm =
+            gfx_frame(Vector3d(0.433, 0.25, 30), window, sf::Color::Red);
         sf::RectangleShape lnk_2 =
-            link(_transform_point(sf::Vector2f(0.433, 0.25), window), 0.5, 60);
+            link(sf::Vector2f(0.433, 0.25), 0.5, 60, window);
+        sf::VertexArray frm2 =
+            gfx_frame(Vector3d(0.683, 0.683, 60), window, sf::Color::Red);
         window.draw(axs);
         window.draw(lnk_1);
+        window.draw(frm);
         window.draw(lnk_2);
+        window.draw(frm2);
 
         window.display();
     }
