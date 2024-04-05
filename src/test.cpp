@@ -139,6 +139,11 @@ TEST_CASE(
     REQUIRE(found_sol);
     REQUIRE(sol_near.isApprox(Vector3d(57.088, 115.264, 67.7269), 1e-3));
 
+    // kinematics should be inverse
+    REQUIRE(where(sol_near, link_lengths_m, utoi(wrist_to_tool),
+                  utoi(base_to_station))
+                .isApprox(goal_frame, 1e-6));
+
     goal_frame = utoi(Vector3d(0.6, -0.3, 45));
     auto [sol_near2, sol_far2, found_sol2] =
         solve(goal_frame, link_lengths_m, joint_angles_current,
@@ -147,4 +152,9 @@ TEST_CASE(
     // a solution should exist
     REQUIRE(found_sol2);
     REQUIRE(sol_far2.isApprox(Vector3d(-85.3599, 119.318, -18.958), 1e-3));
+
+    // kinematics should be inverse
+    REQUIRE(where(sol_far2, link_lengths_m, utoi(wrist_to_tool),
+                  utoi(base_to_station))
+                .isApprox(goal_frame, 1e-6));
 }
