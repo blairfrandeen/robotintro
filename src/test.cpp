@@ -121,3 +121,30 @@ TEST_CASE("kinematics are inverse", "[kinematics]") {
     // kinematics should be inverse
     REQUIRE(kin(sol_near, link_len_m).isApprox(goal_frame, 1e-6));
 }
+
+TEST_CASE(
+    "Exercise 4.3"
+    "[exercise]") {
+    Vector3d joint_angles_current(0, 0, 0);
+    Vector3d link_lengths_m(0.5, 0.5, 0);
+    Vector3d wrist_to_tool(0.1, 0.2, 30);
+    Vector3d base_to_station(-0.1, 0.3, 0);
+
+    Matrix3d goal_frame = utoi(Vector3d(0, 0, -90));
+    auto [sol_near, sol_far, found_sol] =
+        solve(goal_frame, link_lengths_m, joint_angles_current,
+              utoi(wrist_to_tool), utoi(base_to_station));
+
+    // a solution should exist
+    REQUIRE(found_sol);
+    REQUIRE(sol_near.isApprox(Vector3d(57.088, 115.264, 67.7269), 1e-3));
+
+    goal_frame = utoi(Vector3d(0.6, -0.3, 45));
+    auto [sol_near2, sol_far2, found_sol2] =
+        solve(goal_frame, link_lengths_m, joint_angles_current,
+              utoi(wrist_to_tool), utoi(base_to_station));
+
+    // a solution should exist
+    REQUIRE(found_sol2);
+    REQUIRE(sol_far2.isApprox(Vector3d(-85.3599, 119.318, -18.958), 1e-3));
+}

@@ -1,7 +1,6 @@
 #include "robotlib.h"
 
 #include <cmath>
-#include <iostream>
 #include <tuple>
 
 double radians(double degrees) { return M_PI * degrees / 180.0; }
@@ -112,7 +111,6 @@ std::tuple<Vector3d, Vector3d, bool> solve(Matrix3d station_to_tool_goal,
     Matrix3d tool_to_wrist = itransform(wrist_to_tool);
     Matrix3d base_to_wrist_goal =
         base_to_station * station_to_tool_goal * tool_to_wrist;
-    std::cout << itou(base_to_wrist_goal) << std::endl;
     return invkin(base_to_wrist_goal, joint_angles_current, link_lengths_m);
 }
 
@@ -132,7 +130,12 @@ Vector3d _get_solution(double sin_theta_2, double cos_theta_2,
 
     // book equation 4.15
     double theta_2 = atan2(sin_theta_2, cos_theta_2);
-    double theta_3 = phi - theta_1 - theta_2;
+
+    // book equation 4.28
+    double theta_3 = atan2(sin(phi), cos(phi)) - theta_1 - theta_2;
+    if (theta_3 < -M_PI) {
+        theta_3 += 2 * M_PI;
+    }
 
     return Vector3d(degrees(theta_1), degrees(theta_2), degrees(theta_3));
 }
