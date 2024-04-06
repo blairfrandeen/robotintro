@@ -17,6 +17,7 @@ using namespace std;
 
 // multiply meters by this number to get into graphics.
 const double SFML_SCALE = 300.f;
+const double MAX_JOINT_SPEED_DEG_FRAME = 0.2;
 
 sf::VertexArray world_axis(sf::RenderWindow& window, sf::Color axes_color) {
     // Create the X and Y axes
@@ -165,7 +166,9 @@ class Planar3DOFManipulator {
         L2.rotate(joint_angles_deg[1]);
         L3.rotate(joint_angles_deg[2]);
     }
+
     Vector3d end_effector_position() const { return L3.end_frame; }
+
     Vector3d tool_position() const {
         // L3.end_frame is base_to_wrist
         // want base_to_tool
@@ -173,8 +176,21 @@ class Planar3DOFManipulator {
         return itou(tmult(utoi(L3.end_frame), wrist_to_tool));
     }
 
+    Vector3d joint_angles_deg() {
+        return Vector3d(degrees(L1.theta_rad), degrees(L2.theta_rad),
+                        degrees(L3.theta_rad));
+    }
+
     void set_tool(Vector3d wrist_to_tool_u) {
         wrist_to_tool = utoi(wrist_to_tool_u);
+    }
+
+    void move_to_angles(Vector3d target_joint_angles_deg) {
+        Vector3d dist_to_go = target_joint_angles_deg - joint_angles_deg();
+        if (abs(dist_to_go.sum()) > 0) {
+            double max_dist = dist_to_go.cwiseAbs().maxCoeff();
+            move_joints(dist_to_go / max_dist * MAX_JOINT_SPEED_DEG_FRAME);
+        }
     }
 
    private:
@@ -210,7 +226,7 @@ int main() {
     Vector3d link_lengths_m(0.5, 0.5, 0);
     Planar3DOFManipulator m(link_lengths_m, origin_frame);
     Vector3d joint_angles_deg(45, -30, 0);
-    m.move_joints(joint_angles_deg);
+    /* m.move_joints(joint_angles_deg); */
     cout << m.end_effector_position() << endl;
     m.set_tool(Vector3d(0.1, 0.2, 30));
     cout << m.tool_position() << endl;
@@ -226,6 +242,7 @@ int main() {
         }
 
         window.clear();
+        m.move_to_angles(Vector3d(100, -160, 30.1));
 
         // draw things here:
         sf::VertexArray axs = world_axis(window, sf::Color::Cyan);
@@ -234,11 +251,14 @@ int main() {
         sf::VertexArray frm = gfx_frame(m.L1.end_frame, window, sf::Color::Red);
         sf::VertexArray frm2 =
             gfx_frame(m.L2.end_frame, window, sf::Color::Red);
+        sf::VertexArray frm3 =
+            gfx_frame(m.L3.end_frame, window, sf::Color::Green);
         window.draw(axs);
         window.draw(lnk_1);
         window.draw(frm);
         window.draw(lnk_2);
         window.draw(frm2);
+        window.draw(frm3);
 
         window.display();
     }
