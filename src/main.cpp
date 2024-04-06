@@ -120,28 +120,6 @@ sf::VertexArray gfx_frame(Vector3d frame, sf::RenderWindow& window,
 
     return frame_vtx;
 }
-/* Given a link origin and length, draw a rectangle representing the link
-   starting at the origin vertex, with a given length and angle measured from
-   the X axis.
-*/
-sf::RectangleShape link(sf::Vector2f origin, double len_m, double angle_deg,
-                        sf::RenderWindow& window) {
-    // Create a rectangle shape
-    sf::RectangleShape linkRect(
-        sf::Vector2f(len_m * SFML_SCALE, 10.0f));  // Width = len, Height = 10
-
-    // Set the origin of the rectangle to the center of the left edge
-    linkRect.setOrigin(0.0f, linkRect.getSize().y / 2.0f);
-
-    // Set the position of the rectangle
-    linkRect.setPosition(_transform_point(origin, window));
-
-    // Rotate the rectangle around its origin
-    linkRect.setRotation(-angle_deg);
-
-    // Return the rotated and positioned rectangle
-    return linkRect;
-}
 
 class RotaryLink {
    public:
@@ -172,6 +150,9 @@ class RotaryLink {
 class Planar3DOFManipulator {
    public:
     Vector3d& base_frame;
+    RotaryLink L1;
+    RotaryLink L2;
+    RotaryLink L3;
     Planar3DOFManipulator(Vector3d link_lengths_m, Vector3d& base_frame)
         : base_frame(base_frame),
           L1(base_frame, link_lengths_m[0]),
@@ -197,11 +178,31 @@ class Planar3DOFManipulator {
     }
 
    private:
-    RotaryLink L1;
-    RotaryLink L2;
-    RotaryLink L3;
     Matrix3d wrist_to_tool;
 };
+
+/* Given a link origin and length, draw a rectangle representing the link
+   starting at the origin vertex, with a given length and angle measured from
+   the X axis.
+*/
+sf::RectangleShape gfx_link(RotaryLink lnk, sf::RenderWindow& window) {
+    // Create a rectangle shape
+    sf::RectangleShape linkRect(sf::Vector2f(
+        lnk.length_m * SFML_SCALE, 10.0f));  // Width = len, Height = 10
+
+    // Set the origin of the rectangle to the center of the left edge
+    linkRect.setOrigin(0.0f, linkRect.getSize().y / 2.0f);
+
+    // Set the position of the rectangle
+    sf::Vector2f oframe(lnk.origin_frame[0], lnk.origin_frame[1]);
+    linkRect.setPosition(_transform_point(oframe, window));
+
+    // Rotate the rectangle around its origin
+    linkRect.setRotation(-lnk.end_frame[2]);
+
+    // Return the rotated and positioned rectangle
+    return linkRect;
+}
 
 int main() {
     Vector3d origin_frame;
@@ -213,10 +214,7 @@ int main() {
     cout << m.end_effector_position() << endl;
     m.set_tool(Vector3d(0.1, 0.2, 30));
     cout << m.tool_position() << endl;
-    return 0;
-}
 
-int graphics() {
     auto window = sf::RenderWindow{{800, 600u}, "Robot Intro!"};
     window.setFramerateLimit(144);
 
@@ -231,13 +229,11 @@ int graphics() {
 
         // draw things here:
         sf::VertexArray axs = world_axis(window, sf::Color::Cyan);
-        sf::RectangleShape lnk_1 = link(sf::Vector2f(0, 0), 0.5, 30, window);
-        sf::VertexArray frm =
-            gfx_frame(Vector3d(0.433, 0.25, 30), window, sf::Color::Red);
-        sf::RectangleShape lnk_2 =
-            link(sf::Vector2f(0.433, 0.25), 0.5, 60, window);
+        sf::RectangleShape lnk_1 = gfx_link(m.L1, window);
+        sf::RectangleShape lnk_2 = gfx_link(m.L2, window);
+        sf::VertexArray frm = gfx_frame(m.L1.end_frame, window, sf::Color::Red);
         sf::VertexArray frm2 =
-            gfx_frame(Vector3d(0.683, 0.683, 60), window, sf::Color::Red);
+            gfx_frame(m.L2.end_frame, window, sf::Color::Red);
         window.draw(axs);
         window.draw(lnk_1);
         window.draw(frm);
