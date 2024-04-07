@@ -17,7 +17,6 @@ using namespace std;
 
 // multiply meters by this number to get into graphics.
 const double SFML_SCALE = 300.f;
-const double MAX_JOINT_SPEED_DEG_FRAME = 0.2;
 
 sf::VertexArray world_axis(sf::RenderWindow& window, sf::Color axes_color) {
     // Create the X and Y axes
@@ -121,81 +120,6 @@ sf::VertexArray gfx_frame(Vector3d frame, sf::RenderWindow& window,
 
     return frame_vtx;
 }
-
-class RotaryLink {
-   public:
-    const double length_m;
-    double theta_rad;
-    Vector3d& origin_frame;
-    Vector3d end_frame;
-    RotaryLink(Vector3d& origin_frame, double len_m)
-        : length_m(len_m),
-          origin_frame(origin_frame),
-          end_frame(_get_end_frame(origin_frame)) {
-        theta_rad = 0.f;
-    }
-
-    void rotate(double angle_deg) {
-        theta_rad += radians(angle_deg);
-        end_frame = _get_end_frame(origin_frame);
-    }
-
-   private:
-    Vector3d _get_end_frame(Vector3d& base_to_origin) {
-        Vector3d origin_to_end(length_m * cos(theta_rad),
-                               length_m * sin(theta_rad), degrees(theta_rad));
-        return itou(tmult(base_to_origin, origin_to_end));
-    }
-};
-
-class Planar3DOFManipulator {
-   public:
-    Vector3d& base_frame;
-    RotaryLink L1;
-    RotaryLink L2;
-    RotaryLink L3;
-    Planar3DOFManipulator(Vector3d link_lengths_m, Vector3d& base_frame)
-        : base_frame(base_frame),
-          L1(base_frame, link_lengths_m[0]),
-          L2(L1.end_frame, link_lengths_m[1]),
-          L3(L2.end_frame, link_lengths_m[2]),
-          wrist_to_tool(Matrix3d()) {}
-
-    void move_joints(Vector3d joint_angles_deg) {
-        L1.rotate(joint_angles_deg[0]);
-        L2.rotate(joint_angles_deg[1]);
-        L3.rotate(joint_angles_deg[2]);
-    }
-
-    Vector3d end_effector_position() const { return L3.end_frame; }
-
-    Vector3d tool_position() const {
-        // L3.end_frame is base_to_wrist
-        // want base_to_tool
-
-        return itou(tmult(utoi(L3.end_frame), wrist_to_tool));
-    }
-
-    Vector3d joint_angles_deg() {
-        return Vector3d(degrees(L1.theta_rad), degrees(L2.theta_rad),
-                        degrees(L3.theta_rad));
-    }
-
-    void set_tool(Vector3d wrist_to_tool_u) {
-        wrist_to_tool = utoi(wrist_to_tool_u);
-    }
-
-    void move_to_angles(Vector3d target_joint_angles_deg) {
-        Vector3d dist_to_go = target_joint_angles_deg - joint_angles_deg();
-        if (abs(dist_to_go.sum()) > 0) {
-            double max_dist = dist_to_go.cwiseAbs().maxCoeff();
-            move_joints(dist_to_go / max_dist * MAX_JOINT_SPEED_DEG_FRAME);
-        }
-    }
-
-   private:
-    Matrix3d wrist_to_tool;
-};
 
 /* Given a link origin and length, draw a rectangle representing the link
    starting at the origin vertex, with a given length and angle measured from
