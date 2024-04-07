@@ -13,7 +13,7 @@ FetchContent_MakeAvailable(SFML)
 
 # end added for SFML
 
-add_executable(robotintro main.cpp robotlib.cpp)
+add_executable(robotintro main.cpp robotlib.cpp robotgfx.cpp)
 target_link_libraries(robotintro PRIVATE sfml-graphics)
 target_compile_features(robotintro PRIVATE cxx_std_17)
 
