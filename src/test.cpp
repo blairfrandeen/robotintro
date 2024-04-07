@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "Eigen/Geometry"
+#include "Eigen/src/Core/Matrix.h"
 #include "robotlib.cpp"
 #include "robotlib.h"
 
@@ -90,6 +91,17 @@ TEST_CASE("forward kinematics", "[kinematics]") {
                 .isApprox(Eigen::Vector3d(0.683, 0.683, 60), 1e-3));
 }
 
+TEST_CASE("forward kinematics with manipulator", "[kinematics]") {
+    Eigen::Vector3d link_len_m(0.5, 0.5, 0);
+    Eigen::Vector3d origin_frame;
+    Planar3DOFManipulator manip(link_len_m, origin_frame);
+    // solved on paper
+    REQUIRE(itou(kin(Eigen::Vector3d(45, -30, -30), manip))
+                .isApprox(Eigen::Vector3d(0.836, 0.482, -15), 1e-3));
+    // solved on paper
+    REQUIRE(itou(kin(Eigen::Vector3d(30, 30, 0), manip))
+                .isApprox(Eigen::Vector3d(0.683, 0.683, 60), 1e-3));
+}
 TEST_CASE("where kinematics", "[kinematics]") {
     Eigen::Vector3d link_len_m(0.5, 0.5, 0);
     Eigen::Vector3d wrist_to_tool(0.1, 0.2, 30);
@@ -101,6 +113,22 @@ TEST_CASE("where kinematics", "[kinematics]") {
     REQUIRE(itou(where(Eigen::Vector3d(30, 30, 0), link_len_m,
                        utoi(wrist_to_tool), utoi(base_to_station)))
                 .isApprox(Eigen::Vector3d(0.660, 0.570, 90), 1e-3));
+}
+
+TEST_CASE("where kinematics with manipulator", "[kinematics]") {
+    Eigen::Vector3d link_len_m(0.5, 0.5, 0);
+    Eigen::Vector3d origin_frame;
+    Planar3DOFManipulator manip(link_len_m, origin_frame);
+    Eigen::Vector3d wrist_to_tool(0.1, 0.2, 30);
+    manip.set_tool(wrist_to_tool);
+    Eigen::Vector3d base_to_station(-0.1, 0.3, 0);
+    // solved in onshape
+    REQUIRE(
+        itou(where(Eigen::Vector3d(45, -30, -30), utoi(base_to_station), manip))
+            .isApprox(Eigen::Vector3d(1.085, 0.350, 15), 1e-3));
+    REQUIRE(
+        itou(where(Eigen::Vector3d(30, 30, 0), utoi(base_to_station), manip))
+            .isApprox(Eigen::Vector3d(0.660, 0.570, 90), 1e-3));
 }
 
 TEST_CASE("kinematics are inverse", "[kinematics]") {
@@ -120,6 +148,25 @@ TEST_CASE("kinematics are inverse", "[kinematics]") {
 
     // kinematics should be inverse
     REQUIRE(kin(sol_near, link_len_m).isApprox(goal_frame, 1e-6));
+}
+
+TEST_CASE("kinematics are inverse with manipulator class", "[kinematics]") {
+    Eigen::Vector3d link_len_m(0.5, 0.5, 0);
+    Eigen::Matrix3d goal_frame = utoi(Vector3d(0.383, -0.7, 35));
+    Eigen::Vector3d origin_frame;
+    Planar3DOFManipulator manip(link_len_m, origin_frame);
+    auto [sol_near, sol_far, found_sol] = invkin(goal_frame, manip);
+
+    // a solution should exist
+    REQUIRE(found_sol);
+
+    // two solutions should exist, and setting the joint angles to either
+    // solution should yield the same result
+    REQUIRE(
+        itou(kin(sol_near, manip)).isApprox(itou(kin(sol_far, manip)), 1e-3));
+
+    // kinematics should be inverse
+    REQUIRE(kin(sol_near, manip).isApprox(goal_frame, 1e-6));
 }
 
 TEST_CASE(
@@ -156,5 +203,39 @@ TEST_CASE(
     // kinematics should be inverse
     REQUIRE(where(sol_far2, link_lengths_m, utoi(wrist_to_tool),
                   utoi(base_to_station))
+                .isApprox(goal_frame, 1e-6));
+}
+
+TEST_CASE(
+    "Exercise 4.3 with manipulator class"
+    "[exercise]") {
+    Eigen::Vector3d link_len_m(0.5, 0.5, 0);
+    Eigen::Vector3d origin_frame;
+    Planar3DOFManipulator manip(link_len_m, origin_frame);
+    manip.set_tool(Vector3d(0.1, 0.2, 30));
+    Vector3d base_to_station(-0.1, 0.3, 0);
+
+    Matrix3d goal_frame = utoi(Vector3d(0, 0, -90));
+    auto [sol_near, sol_far, found_sol] =
+        solve(goal_frame, manip, utoi(base_to_station));
+
+    // a solution should exist
+    REQUIRE(found_sol);
+    REQUIRE(sol_near.isApprox(Vector3d(57.088, 115.264, 67.7269), 1e-3));
+
+    // kinematics should be inverse
+    REQUIRE(where(sol_near, utoi(base_to_station), manip)
+                .isApprox(goal_frame, 1e-6));
+
+    goal_frame = utoi(Vector3d(0.6, -0.3, 45));
+    auto [sol_near2, sol_far2, found_sol2] =
+        solve(goal_frame, manip, utoi(base_to_station));
+
+    // a solution should exist
+    REQUIRE(found_sol2);
+    REQUIRE(sol_far2.isApprox(Vector3d(-85.3599, 119.318, -18.958), 1e-3));
+
+    // kinematics should be inverse
+    REQUIRE(where(sol_far2, utoi(base_to_station), manip)
                 .isApprox(goal_frame, 1e-6));
 }

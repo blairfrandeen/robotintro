@@ -2,7 +2,10 @@
 #include <Eigen/Geometry>
 #include <cmath>
 #include <iostream>
+#include <iterator>
+#include <vector>
 
+#include "robotgfx.h"
 #include "robotlib.h"
 
 using Eigen::Matrix2d;
@@ -13,22 +16,46 @@ using Eigen::Vector3d;
 using namespace std;
 
 int main() {
-    Vector3d joint_angles_current(0, 0, 0);
+    Vector3d origin_frame;
+
     Vector3d link_lengths_m(0.5, 0.5, 0);
-    /* Matrix3d goal_frame = utoi(Vector3d(0.6, -0.3, 45)); */
-    Matrix3d goal_frame = utoi(Vector3d(0, 0, -90));
-    Matrix3d wrelb = kin(joint_angles_current, link_lengths_m);
-    Vector3d wrist_to_tool(0.1, 0.2, 30);
-    Vector3d base_to_station(-0.1, 0.3, 0);
-    cout << "Forward Kinematics:" << endl << itou(wrelb) << endl;
-    auto [sol_near, sol_far, found_sol] =
-        solve(goal_frame, link_lengths_m, joint_angles_current,
-              utoi(wrist_to_tool), utoi(base_to_station));
-    if (found_sol) {
-        cout << "Near solution: " << endl << sol_near << endl;
-        cout << "Far solution: " << endl << sol_far << endl;
-    } else {
-        cout << "No solution!" << endl;
+    Planar3DOFManipulator m(link_lengths_m, origin_frame);
+    Vector3d joint_angles_deg(45, -30, 0);
+    /* m.move_joints(joint_angles_deg); */
+    cout << m.base_to_end_effector() << endl;
+    m.set_tool(Vector3d(0.1, 0.2, 30));
+    cout << m.base_to_tool() << endl;
+
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Robot Intro!");
+    window.setFramerateLimit(144);
+
+    while (window.isOpen()) {
+        for (auto event = sf::Event{}; window.pollEvent(event);) {
+            if (event.type == sf::Event::Closed) {
+                window.close();
+            }
+        }
+
+        window.clear();
+        m.move_to_angles(Vector3d(100, -160, 30.1));
+
+        // draw things here:
+        sf::VertexArray axs = world_axis(window, sf::Color::Cyan);
+        sf::RectangleShape lnk_1 = gfx_link(m.L1, window);
+        sf::RectangleShape lnk_2 = gfx_link(m.L2, window);
+        sf::VertexArray frm = gfx_frame(m.L1.end_frame, window, sf::Color::Red);
+        sf::VertexArray frm2 =
+            gfx_frame(m.L2.end_frame, window, sf::Color::Red);
+        sf::VertexArray frm3 =
+            gfx_frame(m.L3.end_frame, window, sf::Color::Green);
+        window.draw(axs);
+        window.draw(lnk_1);
+        window.draw(frm);
+        window.draw(lnk_2);
+        window.draw(frm2);
+        window.draw(frm3);
+
+        window.display();
     }
     return 0;
 }
