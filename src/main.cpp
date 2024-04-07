@@ -151,9 +151,9 @@ int main() {
     Planar3DOFManipulator m(link_lengths_m, origin_frame);
     Vector3d joint_angles_deg(45, -30, 0);
     /* m.move_joints(joint_angles_deg); */
-    cout << m.end_effector_position() << endl;
+    cout << m.base_to_end_effector() << endl;
     m.set_tool(Vector3d(0.1, 0.2, 30));
-    cout << m.tool_position() << endl;
+    cout << m.base_to_tool() << endl;
 
     sf::RenderWindow window(sf::VideoMode(800, 600), "Robot Intro!");
     window.setFramerateLimit(144);

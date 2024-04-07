@@ -3,6 +3,8 @@
 #include <cmath>
 #include <tuple>
 
+#include "Eigen/src/Core/Matrix.h"
+
 double radians(double degrees) { return M_PI * degrees / 180.0; }
 double degrees(double radians) { return 180 / M_PI * radians; }
 
@@ -81,7 +83,8 @@ Matrix3d link_transform2d(const double link_len, double theta_rad) {
 
    Returns wrist frame relative to base frame
 */
-Matrix3d kin(Vector3d joint_angles_deg, Vector3d link_lengths_m) {
+const Matrix3d kin(const Vector3d joint_angles_deg,
+                   const Vector3d link_lengths_m) {
     Matrix3d base_to_link1 =
         link_transform2d(link_lengths_m[0], radians(joint_angles_deg[0]));
     Matrix3d link1_to_link2 =
@@ -95,23 +98,44 @@ Matrix3d kin(Vector3d joint_angles_deg, Vector3d link_lengths_m) {
     return base_to_wrist;
 }
 
-Matrix3d where(Vector3d joint_angles_deg, Vector3d link_lengths_m,
-               Matrix3d wrist_to_tool, Matrix3d base_to_station) {
+const Matrix3d kin(const Vector3d joint_angles_deg,
+                   const Planar3DOFManipulator &manipulator) {
+    return kin(joint_angles_deg, manipulator.link_lengths_m());
+}
+
+const Matrix3d where(const Vector3d joint_angles_deg,
+                     const Vector3d link_lengths_m,
+                     const Matrix3d wrist_to_tool,
+                     const Matrix3d base_to_station) {
     Matrix3d base_to_wrist = kin(joint_angles_deg, link_lengths_m);
     Matrix3d station_to_base = itransform(base_to_station);
     Matrix3d station_to_tool = station_to_base * base_to_wrist * wrist_to_tool;
     return station_to_tool;
 }
 
-std::tuple<Vector3d, Vector3d, bool> solve(Matrix3d station_to_tool_goal,
-                                           Vector3d link_lengths_m,
-                                           Vector3d joint_angles_current,
-                                           Matrix3d wrist_to_tool,
-                                           Matrix3d base_to_station) {
+const Matrix3d where(const Vector3d joint_angles_deg,
+                     const Matrix3d base_to_station,
+                     const Planar3DOFManipulator &manipulator) {
+    return where(joint_angles_deg, manipulator.link_lengths_m(),
+                 manipulator.wrist_to_tool(), base_to_station);
+}
+
+const std::tuple<Vector3d, Vector3d, bool> solve(
+    const Matrix3d station_to_tool_goal, const Vector3d link_lengths_m,
+    const Vector3d joint_angles_current, const Matrix3d wrist_to_tool,
+    const Matrix3d base_to_station) {
     Matrix3d tool_to_wrist = itransform(wrist_to_tool);
     Matrix3d base_to_wrist_goal =
         base_to_station * station_to_tool_goal * tool_to_wrist;
     return invkin(base_to_wrist_goal, joint_angles_current, link_lengths_m);
+}
+
+const std::tuple<Vector3d, Vector3d, bool> solve(
+    const Matrix3d station_to_tool_goal,
+    const Planar3DOFManipulator &manipulator, const Matrix3d base_to_station) {
+    return solve(station_to_tool_goal, manipulator.link_lengths_m(),
+                 manipulator.joint_angles_deg(), manipulator.wrist_to_tool(),
+                 base_to_station);
 }
 
 Vector3d _get_solution(double sin_theta_2, double cos_theta_2,
@@ -140,9 +164,9 @@ Vector3d _get_solution(double sin_theta_2, double cos_theta_2,
     return Vector3d(degrees(theta_1), degrees(theta_2), degrees(theta_3));
 }
 
-std::tuple<Vector3d, Vector3d, bool> invkin(Matrix3d goal_frame,
-                                            Vector3d joint_angles_current,
-                                            Vector3d link_lengths_m) {
+const std::tuple<Vector3d, Vector3d, bool> invkin(Matrix3d goal_frame,
+                                                  Vector3d joint_angles_current,
+                                                  Vector3d link_lengths_m) {
     // initialize variables
     Vector3d sol_near, sol_far;
     Vector3d goal_frame_vec = itou(goal_frame);
@@ -175,4 +199,11 @@ std::tuple<Vector3d, Vector3d, bool> invkin(Matrix3d goal_frame,
     } else {
         return std::make_tuple(sol2, sol1, true);
     }
+}
+
+const std::tuple<Vector3d, Vector3d, bool> invkin(
+    Matrix3d goal_frame, Planar3DOFManipulator &manipulator) {
+    Vector3d link_lengths_m = manipulator.link_lengths_m();
+    Vector3d joint_angles_current = manipulator.joint_angles_deg();
+    return invkin(goal_frame, joint_angles_current, link_lengths_m);
 }
