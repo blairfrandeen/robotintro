@@ -231,7 +231,7 @@ int main() {
     m.set_tool(Vector3d(0.1, 0.2, 30));
     cout << m.tool_position() << endl;
 
-    auto window = sf::RenderWindow{{800, 600u}, "Robot Intro!"};
+    sf::RenderWindow window(sf::VideoMode(800, 600), "Robot Intro!");
     window.setFramerateLimit(144);
 
     while (window.isOpen()) {
